@@ -8,6 +8,7 @@ import {
 } from './config';
 import './index.css';
 import { handlePdfGeneration } from './utils/pdfService';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 // --- UTILITY FUNCTION: AGE CALCULATION ---
 const calculateAge = (dobString) => {
@@ -58,11 +59,20 @@ const EchoReportForm = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            // Your existing submission logic here
-            console.log('Form submitted:', formData);
+            const response = await fetch(`${API_BASE_URL}/api/reports`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ formData })
+            });
+
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.error || 'Failed to save report');
+            }
+
             setSubmissionMessage({
                 type: 'success',
-                text: 'Form submitted successfully!'
+                text: `Report saved successfully (ID: ${payload.id})`
             });
         } catch (error) {
             console.error('Error submitting form:', error);
