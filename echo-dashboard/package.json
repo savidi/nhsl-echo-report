@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://RevokeX.github.io/nhsl-echo-cardio",
+  "homepage": "https:/savidi.github.io/nhsl-echo-report",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
