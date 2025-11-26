@@ -1,4 +1,5 @@
 // backend/services/pdfGenerator.js
+
 const fs = require('fs');
 const path = require('path');
 const Handlebars = require('handlebars');
@@ -6,112 +7,84 @@ const puppeteer = require('puppeteer');
 
 const TEMPLATE_FILE = path.join(__dirname, '..', 'templates', 'echoReportTemplate.html');
 const REPORTS_DIR = path.join(__dirname, '..', 'reports');
-const HEADER_LOGO = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" rx="18" fill="%23e3efff"/><path d="M48.16 70.48l-1.9-1.75C32.4 57.07 24 48.96 24 38.9 24 31.23 30.05 25 37.6 25c4.6 0 9 2.2 11.56 5.7C51.4 27.2 55.8 25 60.4 25c7.55 0 13.6 6.22 13.6 13.9 0 10.06-8.4 18.17-22.26 29.84l-1.58 1.75z" fill="%230a4f94"/></svg>';
 
-// Register helpers used by the Handlebars template
-Handlebars.registerHelper('mod', (a, b) => {
-    const numA = Number(a);
-    const numB = Number(b);
-    if (Number.isNaN(numA) || Number.isNaN(numB) || numB === 0) return 0;
-    return numA % numB;
-});
+const buildTemplateModel = (formData = {}) => {
+    // Helper to get value or N/A
+    const getValue = (key) => formData[key] || 'N/A';
 
-Handlebars.registerHelper('eq', (a, b) => {
-    return a === b;
-});
+    // Format patient information
+    const patientInfo = [
+        { label: 'Name', value: getValue('Name') },
+        { label: 'Clinic ID', value: getValue('ID') },
+        { label: 'Age/Gender', value: `${getValue('Age')} / ${getValue('Gender') || 'N/A'}` },
+        { label: 'Indication', value: getValue('Indication') },
+        { label: 'Date of Study', value: new Date().toLocaleDateString() }
+    ].filter(item => item.value !== 'N/A');
 
-const PATIENT_INFO_FIELDS = [
-    { key: 'Name', label: 'Patient Name' },
-    { key: 'ID', label: 'Clinic ID' },
-    { key: 'DOB', label: 'Date of Birth' },
-    { key: 'Age', label: 'Age' },
-    { key: 'Indication', label: 'Indication' },
-    { key: 'Date of Intervention', label: 'Date of Intervention' },
-    { key: 'Pre-Op Specify', label: 'Pre-Op Details' }
-];
+    // Organize measurements by category
+    const measurements = {
+        'Left Ventricle': [
+            { label: 'LV EDD', value: getValue('LV EDD'), unit: 'mm' },
+            { label: 'LV ESD', value: getValue('LV ESD'), unit: 'mm' },
+            { label: 'IVSd', value: getValue('IVSd'), unit: 'mm' },
+            { label: 'LVPWd', value: getValue('LVPWd'), unit: 'mm' },
+            { label: 'EF', value: getValue('EF'), unit: '%' },
+            { label: 'RWMA', value: getValue('RWMA') }
+        ].filter(item => item.value !== 'N/A'),
+        
+        'Diastolic Function': [
+            { label: 'E', value: getValue('E'), unit: 'cm/s' },
+            { label: 'A', value: getValue('A'), unit: 'cm/s' },
+            { label: 'E/A', value: getValue('E/A ratio') },
+            { label: 'e\'', value: getValue('Medial wall e\''), unit: 'cm/s' },
+            { label: 'E/e\'', value: getValue('E/e\'') }
+        ].filter(item => item.value !== 'N/A'),
+        
+        'Chambers': [
+            { label: 'LA Size', value: getValue('LA') },
+            { label: 'LA Diameter', value: getValue('LA diameter'), unit: 'cm' },
+            { label: 'RA Size', value: getValue('RA') },
+            { label: 'RA Diameter', value: getValue('RA diameter'), unit: 'cm' },
+            { label: 'RV Function', value: getValue('RV') },
+            { label: 'TAPSE', value: getValue('TAPSE'), unit: 'mm' }
+        ].filter(item => item.value !== 'N/A')
+    };
 
-const SUMMARY_FIELDS = [
-    { key: 'LV systolic function summary', label: 'LV systolic function' },
-    { key: 'LV diastolic function summary', label: 'LV diastolic function' },
-    { key: 'Valves summary', label: 'Valves summary' },
-    { key: 'Conclusion', label: 'Conclusion' },
-    { key: 'Recommendation', label: 'Recommendation' }
-];
+    // Valve assessments
+    const valveAssessments = {
+        'Mitral Valve': {
+            status: getValue('Mitral valve'),
+            stenosis: getValue('Mitral stenosis'),
+            regurgitation: getValue('Mitral Regurgitation'),
+            specialComments: getValue('Special comments on mitral valve')
+        },
+        'Aortic Valve': {
+            status: getValue('Aortic valve'),
+            stenosis: getValue('Aortic stenosis'),
+            regurgitation: getValue('Aortic regurgitation')
+        },
+        'Tricuspid Valve': {
+            status: getValue('Tricuspid valve'),
+            regurgitation: getValue('Tricuspid regurgitation')
+        }
+    };
+
+    return {
+        reportTitle: 'Echocardiogram Report',
+        headerLogo: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 96 96"><rect width="96" height="96" rx="18" fill="%23e3efff"/><path d="M48.16 70.48l-1.9-1.75C32.4 57.07 24 48.96 24 38.9 24 31.23 30.05 25 37.6 25c4.6 0 9 2.2 11.56 5.7C51.4 27.2 55.8 25 60.4 25c7.55 0 13.6 6.22 13.6 13.9 0 10.06-8.4 18.17-22.26 29.84l-1.58 1.75z" fill="%230a4f94"/></svg>',
+        generatedAt: new Date().toLocaleString(),
+        patientInfo,
+        measurements,
+        valveAssessments,
+        conclusion: getValue('Conclusion') || 'No significant abnormalities detected.',
+        recommendations: getValue('Recommendation') || 'Routine follow-up as clinically indicated.'
+    };
+};
 
 const ensureReportsDir = () => {
     if (!fs.existsSync(REPORTS_DIR)) {
         fs.mkdirSync(REPORTS_DIR, { recursive: true });
     }
-};
-
-const formatDate = (value) => {
-    if (!value) return 'N/A';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-        return value;
-    }
-    return date.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-    });
-};
-
-const normalizeValue = (value) => {
-    if (value === null || value === undefined || value === '') {
-        return 'N/A';
-    }
-    if (typeof value === 'string') {
-        return value.trim() === '' ? 'N/A' : value;
-    }
-    return value;
-};
-
-const buildTemplateModel = (formData = {}) => {
-    const upperCaseKeys = new Set([
-        ...PATIENT_INFO_FIELDS.map(field => field.key),
-        ...SUMMARY_FIELDS.map(field => field.key)
-    ]);
-
-    const patientInfo = PATIENT_INFO_FIELDS
-        .map(field => ({
-            label: field.label,
-            value: field.key === 'DOB'
-                ? formatDate(formData[field.key])
-                : normalizeValue(formData[field.key])
-        }))
-        .filter(item => item.value !== 'N/A');
-
-    const summary = SUMMARY_FIELDS
-        .map(field => ({
-            label: field.label,
-            value: normalizeValue(formData[field.key])
-        }))
-        .filter(item => item.value !== 'N/A');
-
-    const measurements = Object.entries(formData || {})
-        .filter(([key]) => !upperCaseKeys.has(key))
-        .map(([key, value]) => ({
-            label: key,
-            value: normalizeValue(value)
-        }))
-        .filter(item => item.value !== 'N/A')
-        .sort((a, b) => a.label.localeCompare(b.label));
-
-    return {
-        reportTitle: 'Echocardiogram Report',
-        generatedAt: new Date().toLocaleString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        }),
-        patientInfo,
-        summary,
-        measurements,
-        headerLogo: HEADER_LOGO
-    };
 };
 
 const compileTemplate = (templateData) => {
