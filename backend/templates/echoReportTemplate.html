@@ -156,6 +156,7 @@
     </div>
     {{/each}}
 
+    {{#if hasValveAssessments}}
     <div class="section">
         <div class="section-title">Valve Assessment</div>
         {{#each valveAssessments}}
@@ -172,11 +173,16 @@
         </div>
         {{/each}}
     </div>
+    {{/if}}
 
+    {{#if conclusion}}
     <div class="conclusion">
         <div><strong>Conclusion:</strong> {{conclusion}}</div>
+        {{#if recommendations}}
         <div style="margin-top: 2mm;"><strong>Recommendations:</strong> {{recommendations}}</div>
+        {{/if}}
     </div>
+    {{/if}}
 
     <div class="footer">
         Report generated on {{generatedAt}} | This is a computer-generated report
