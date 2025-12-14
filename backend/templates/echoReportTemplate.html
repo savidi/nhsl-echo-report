@@ -25,7 +25,7 @@
             height: 20mm;
         }
         .header-text {
-            text-align: center;
+            text-align: left;
         }
         .header-text h1 {
             margin: 0;
@@ -47,7 +47,7 @@
         }
         .info-label {
             font-weight: bold;
-            color: #555;
+            color: #1c1c1c;
             font-size: 9px;
             text-transform: uppercase;
         }
@@ -73,14 +73,20 @@
             padding: 3px 5px;
             border: 1px solid #eee;
             border-radius: 3px;
+            /* make measurement values wrap and allow taller comment boxes */
         }
         .measurement-label {
-            font-size: 8px;
-            color: #666;
+            font-size: 10px;
+            color: #4d4d4d;
             margin-bottom: 1px;
         }
         .measurement-value {
             font-weight: bold;
+ 
+        }
+        /* Wide measurement (comment/summary) spans 2 columns */
+        .measurement--wide {
+            grid-column: span 2;
         }
         .valve-assessment {
             margin-bottom: 3mm;
@@ -124,8 +130,8 @@
     <div class="header">
         <div class="header-text">
             <h1>Institute of Cardiology - National Hospital of Sri Lanka</h1>
-            <p>Unit 2</p>
-            <p>2D Echocardiogram - Report</p>
+            <h1>Unit 2</h1>
+            <h2>Echocardiogram - Report</h2>
         </div>
         {{#if headerLogo}}
         <img src="{{headerLogo}}" alt="Logo">
@@ -146,7 +152,7 @@
         <div class="section-title">{{@key}}</div>
         <div class="measurements-grid">
             {{#each this}}
-            <div class="measurement">
+            <div class="measurement {{#if wide}}measurement--wide{{/if}}">
                 <div class="measurement-label">{{label}}</div>
                 <div class="measurement-value">
                     {{value}} {{#if unit}}{{unit}}{{/if}}

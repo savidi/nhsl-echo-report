@@ -23,7 +23,6 @@ const buildTemplateModel = (formData = {}) => {
         if (typeof v === 'string' && v.trim() === '') return 'N/A';
         return v;
     };
-
     // Format patient information
     const patientInfo = [
         { label: 'Name', value: getValue('Name') },
@@ -34,7 +33,8 @@ const buildTemplateModel = (formData = {}) => {
         { label: 'Indication', value: getValue('Indication') },
         { label: 'Date of Intervention', value: getValue('Date of Intervention') },
         { label: 'Pre-Op Specify', value: getValue('Pre-Op Specify') },
-        { label: 'Date of Study', value: new Date().toLocaleDateString() }
+        { label: 'Date of Study', value: new Date().toISOString().split('T')[0]  },
+        { label: 'Done By', value: 'Dr.Leonard Wanninayake' }
     ].filter(item => item.value !== 'N/A');
 
     // Organize measurements by category
@@ -144,6 +144,17 @@ const buildTemplateModel = (formData = {}) => {
         ].filter(item => item.value !== 'N/A')
     };
 
+    // Mark comment-like fields as wide so they span multiple columns in the template
+    Object.values(measurements).forEach((items) => {
+        if (Array.isArray(items)) {
+            items.forEach((item) => {
+                if (item && item.label && /comment|comments|summary|special/i.test(item.label)) {
+                    item.wide = true;
+                }
+            });
+        }
+    });
+
     // Remove measurement sections that have no items (compute AFTER measurements is built)
     const filteredMeasurements = Object.fromEntries(
         Object.entries(measurements).filter(([, items]) => Array.isArray(items) && items.length > 0)
@@ -194,10 +205,10 @@ const generateEchoReport = async (formData = {}) => {
             format: 'A4',
             printBackground: true,
             margin: {
-                top: '15mm',
-                bottom: '20mm',
-                left: '12mm',
-                right: '12mm'
+                top: '5mm',
+                bottom: '5mm',
+                left: '5mm',
+                right: '5mm'
             }
         });
 
