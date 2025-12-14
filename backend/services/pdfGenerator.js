@@ -8,6 +8,13 @@ const puppeteer = require('puppeteer');
 const TEMPLATE_FILE = path.join(__dirname, '..', 'templates', 'echoReportTemplate.html');
 const REPORTS_DIR = path.join(__dirname, '..', 'reports');
 
+// Register helpers
+if (!Handlebars.helpers.or) {
+    Handlebars.registerHelper('or', function(a, b) {
+        return a || b;
+    });
+}
+
 const buildTemplateModel = (formData = {}) => {
     // Helper to get value or N/A
     const getValue = (key) => {
@@ -17,17 +24,16 @@ const buildTemplateModel = (formData = {}) => {
         return v;
     };
 
-    // Remove measurement sections that have no items
-    const filteredMeasurements = Object.fromEntries(
-        Object.entries(measurements).filter(([, items]) => Array.isArray(items) && items.length > 0)
-    );
-
     // Format patient information
     const patientInfo = [
         { label: 'Name', value: getValue('Name') },
         { label: 'Clinic ID', value: getValue('ID') },
-        { label: 'Age/Gender', value: `${getValue('Age')} / ${getValue('Gender') || 'N/A'}` },
+        { label: 'Date of Birth', value: getValue('DOB') },
+        { label: 'Age', value: getValue('Age') },
+        { label: 'Gender', value: getValue('Gender') },
         { label: 'Indication', value: getValue('Indication') },
+        { label: 'Date of Intervention', value: getValue('Date of Intervention') },
+        { label: 'Pre-Op Specify', value: getValue('Pre-Op Specify') },
         { label: 'Date of Study', value: new Date().toLocaleDateString() }
     ].filter(item => item.value !== 'N/A');
 
@@ -39,7 +45,9 @@ const buildTemplateModel = (formData = {}) => {
             { label: 'IVSd', value: getValue('IVSd'), unit: 'mm' },
             { label: 'LVPWd', value: getValue('pwD'), unit: 'mm' },
             { label: 'EF', value: getValue('EF'), unit: '%' },
-            { label: 'RWMA', value: getValue('RWMA') }
+            { label: 'RWMA', value: getValue('RWMA') },
+            { label: 'LV cavity', value: getValue('LV cavity') },
+            { label: 'LV Systolic Function Comment', value: getValue('Systolic Comment') }
         ].filter(item => item.value !== 'N/A'),
         
         'LV Diastolic Function Assessment': [
@@ -53,13 +61,18 @@ const buildTemplateModel = (formData = {}) => {
         'Chamber Dimensions and Function': [
             { label: 'LA', value: getValue('LA') },
             { label: 'LA diameter', value: getValue('LA diameter'), unit: 'cm' },
+            { label: 'LA Comments', value: getValue('LA Comments') },
             { label: 'RA', value: getValue('RA') },
             { label: 'RA diameter', value: getValue('RA diameter'), unit: 'cm' },
+            { label: 'RA Comments', value: getValue('RA Comments') },
             { label: 'RV', value: getValue('RV') },
+            { label: 'RV Comments', value: getValue('RV Comments') },
             { label: 'TAPSE', value: getValue('TAPSE'), unit: 'cm' }
         ].filter(item => item.value !== 'N/A'),
 
         'Mitral Valve Assessment': [
+            { label: 'Vegetations', value: getValue('MV Vegatations') },
+            { label: 'Comment on vegetation', value: getValue('MV Comment on vegetation') },
             { label: 'VC', value: getValue('VC'), unit: 'cm' },
             { label: 'EROA (PISA)', value: getValue('EROA (PISA)'), unit: 'cm²' },
             { label: 'Mitral valve area (Trace)', value: getValue('Mitral valve area (Trace)'), unit: 'cm²' },
@@ -75,6 +88,12 @@ const buildTemplateModel = (formData = {}) => {
         ].filter(item => item.value !== 'N/A'),
 
         'Aortic Valve Assessment': [
+            { label: 'Vegetations', value: getValue('AV Vegatations') },
+            { label: 'Comment on vegetation', value: getValue('AV Comment on vegetation') },
+            { label: 'Aortic annulus', value: getValue('Aortic annulus'), unit: 'cm' },
+            { label: 'Aortic sinuses', value: getValue('Aortic sinuses'), unit: 'cm' },
+            { label: 'Sino - tubular junction', value: getValue('Sino - tubular junction'), unit: 'cm' },
+            { label: 'Ascending aorta', value: getValue('Ascending aorta'), unit: 'cm' },
             { label: 'AI P1/2', value: getValue('AI P1/2'), unit: 'm/s' },
             { label: 'LVOT diameter (AR)', value: getValue('LVOT diamater'), unit: 'mm' },
             { label: 'Regurgitant jet width', value: getValue('Regurgitant jet width'), unit: 'mm' },
@@ -89,6 +108,8 @@ const buildTemplateModel = (formData = {}) => {
         ].filter(item => item.value !== 'N/A'),
 
         'Tricuspid Valve Assessment': [
+            { label: 'Vegetations', value: getValue('TV Vegatations') },
+            { label: 'Comment on vegetation', value: getValue('TV Comment on vegetation') },
             { label: 'TRPG', value: getValue('TRPG'), unit: 'mmHg' },
             { label: 'VC diameter', value: getValue('VC diameter'), unit: 'mm' },
             { label: 'EROA (PISA)', value: getValue('EROA (pisa)'), unit: 'mm²' },
@@ -96,9 +117,18 @@ const buildTemplateModel = (formData = {}) => {
         ].filter(item => item.value !== 'N/A'),
 
         'Pulmonary Valve Assessment': [
+            { label: 'Vegetations', value: getValue('PV Vegatations') },
+            { label: 'Comment on vegetation', value: getValue('PV Comment on vegetation') },
             { label: 'Pulmonary valve maximum pressure gradients', value: getValue('Pulmonary valve maximum pressure gradients'), unit: 'mmHg' },
             { label: 'Pulmonary valve mean pressure gradient', value: getValue('Pulmonary valve mean pressure gradient'), unit: 'mmHg' },
             { label: 'Peak velocity', value: getValue('Peak velocity'), unit: 'cm/s' }
+        ].filter(item => item.value !== 'N/A'),
+
+        'Septal Assessment': [
+            { label: 'Intra atrial septum', value: getValue('Intra atrial septum') },
+            { label: 'IAS Special Comments', value: getValue('IAS Special Comments') },
+            { label: 'Intra ventricular septum', value: getValue('Intra ventricular septum') },
+            { label: 'IVS Special Comments', value: getValue('IVS Special Comments') }
         ].filter(item => item.value !== 'N/A'),
 
         'Report Summary and Recommendations': [
@@ -113,6 +143,11 @@ const buildTemplateModel = (formData = {}) => {
             { label: 'Valves summary', value: getValue('Valves summary') }
         ].filter(item => item.value !== 'N/A')
     };
+
+    // Remove measurement sections that have no items (compute AFTER measurements is built)
+    const filteredMeasurements = Object.fromEntries(
+        Object.entries(measurements).filter(([, items]) => Array.isArray(items) && items.length > 0)
+    );
 
     // Valve assessments
     // Helper to prune 'N/A' fields from an object

@@ -175,9 +175,11 @@
     </div>
     {{/if}}
 
-    {{#if conclusion}}
+    {{#if (or conclusion recommendations)}}
     <div class="conclusion">
+        {{#if conclusion}}
         <div><strong>Conclusion:</strong> {{conclusion}}</div>
+        {{/if}}
         {{#if recommendations}}
         <div style="margin-top: 2mm;"><strong>Recommendations:</strong> {{recommendations}}</div>
         {{/if}}
