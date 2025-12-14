@@ -149,50 +149,14 @@ const buildTemplateModel = (formData = {}) => {
         Object.entries(measurements).filter(([, items]) => Array.isArray(items) && items.length > 0)
     );
 
-    // Valve assessments
-    // Helper to prune 'N/A' fields from an object
-    const prune = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== 'N/A'));
-
-    // Build valve assessments and drop empty sections
-    const rawValveAssessments = {
-        'Mitral Valve Assessment': prune({
-            status: getValue('Mitral valve'),
-            stenosis: getValue('Mitral stenosis'),
-            regurgitation: getValue('Mitral Regurgitation'),
-            specialComments: getValue('Special comments on mitral valve')
-        }),
-        'Aortic Valve Assessment': prune({
-            status: getValue('Aortic valve'),
-            stenosis: getValue('Aortic stenosis'),
-            regurgitation: getValue('Aortic regurgitation')
-        }),
-        'Tricuspid Valve Assessment': prune({
-            status: getValue('Tricuspid valve'),
-            regurgitation: getValue('Tricuspid regurgitation'),
-            specialComments: getValue('TV Comments')
-        }),
-        'Pulmonary Valve Assessment': prune({
-            status: getValue('Pulmonary valve'),
-            stenosis: getValue('Pulmonary stenosis'),
-            regurgitation: getValue('Pulmonary regurgitation'),
-            specialComments: getValue('PV Comments')
-        })
-    };
-
-    const valveAssessments = Object.fromEntries(
-        Object.entries(rawValveAssessments).filter(([, props]) => Object.keys(props).length > 0)
-    );
+    // No separate valve summary block; all valve data is shown within measurement sections
 
     return {
         reportTitle: 'Echocardiogram Report',
         headerLogo: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 96 96"><rect width="96" height="96" rx="18" fill="%23e3efff"/><path d="M48.16 70.48l-1.9-1.75C32.4 57.07 24 48.96 24 38.9 24 31.23 30.05 25 37.6 25c4.6 0 9 2.2 11.56 5.7C51.4 27.2 55.8 25 60.4 25c7.55 0 13.6 6.22 13.6 13.9 0 10.06-8.4 18.17-22.26 29.84l-1.58 1.75z" fill="%230a4f94"/></svg>',
         generatedAt: new Date().toLocaleString(),
         patientInfo,
-        measurements: filteredMeasurements,
-        valveAssessments,
-        hasValveAssessments: Object.keys(valveAssessments).length > 0,
-        conclusion: getValue('Conclusion') === 'N/A' ? '' : getValue('Conclusion'),
-        recommendations: getValue('Recommendation') === 'N/A' ? '' : getValue('Recommendation')
+        measurements: filteredMeasurements
     };
 };
 

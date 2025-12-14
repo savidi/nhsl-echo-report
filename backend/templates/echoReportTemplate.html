@@ -156,35 +156,7 @@
     </div>
     {{/each}}
 
-    {{#if hasValveAssessments}}
-    <div class="section">
-        <div class="section-title">Valve Assessment</div>
-        {{#each valveAssessments}}
-        <div class="valve-assessment">
-            <div class="valve-name">{{@key}}</div>
-            <div class="valve-details">
-                {{#each this}}
-                <div class="valve-property">
-                    <span class="property-label">{{@key}}:</span> 
-                    <span class="property-value">{{this}}</span>
-                </div>
-                {{/each}}
-            </div>
-        </div>
-        {{/each}}
-    </div>
-    {{/if}}
 
-    {{#if (or conclusion recommendations)}}
-    <div class="conclusion">
-        {{#if conclusion}}
-        <div><strong>Conclusion:</strong> {{conclusion}}</div>
-        {{/if}}
-        {{#if recommendations}}
-        <div style="margin-top: 2mm;"><strong>Recommendations:</strong> {{recommendations}}</div>
-        {{/if}}
-    </div>
-    {{/if}}
 
     <div class="footer">
         Report generated on {{generatedAt}} | This is a computer-generated report
