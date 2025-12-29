@@ -27,7 +27,10 @@ const calculateAge = (dobString) => {
 };
 
 const EchoReportForm = () => {
-    const [formData, setFormData] = useState(initialFormState);
+    const [formData, setFormData] = useState({
+        ...initialFormState,
+        DOB: initialFormState.DOB && initialFormState.DOB !== '' ? initialFormState.DOB : '1980-01-01',
+    });
     const [submissionMessage, setSubmissionMessage] = useState(null);
     const [loading, setLoading] = useState(false);
     
