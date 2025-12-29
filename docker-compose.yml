@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./echo-dashboard
+    ports:
+      - "5173:5173" # Maps container port to your machine's port
+    environment:
+      - CHOKIDAR_USEPOLLING=true # Helps with file updates on some systems
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000" # Change this if your server.js uses a different port
